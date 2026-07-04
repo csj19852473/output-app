@@ -661,17 +661,15 @@ async function openPrint() {
     const div = document.createElement('div');
     div.style.cssText = `position:fixed;left:-9999px;top:0;width:${W}px;background:#fff;padding:20px 0 10px;font-family:'Malgun Gothic',Arial,sans-serif;`;
     div.innerHTML = `
+        <style>
+            .pt th{padding:5px 2px;font-size:8pt;border:1px solid #2c4f6e;text-align:center;color:white;background:#1a3a5c}
+            .pt td{border:1px solid #bbb;padding:3px 2px;text-align:center;vertical-align:middle;font-size:8pt}
+            .pt .nc{background:#f0f3f7;font-weight:bold;text-align:left;padding-left:5px}
+            .pt .tc{background:#e8f5e9;font-weight:bold;color:#1b5e20}
+        </style>
         <div style="text-align:center;font-size:14pt;font-weight:bold;margin-bottom:10px">${y}년 ${parseInt(m)}월 출력일보</div>
-        <table style="border-collapse:collapse;table-layout:fixed;width:${W}px">
-            <thead style="background:#1a3a5c;color:white">
-                <style>
-                    thead th{padding:5px 2px;font-size:8pt;border:1px solid #2c4f6e;text-align:center;color:white;background:#1a3a5c}
-                    tbody td{border:1px solid #bbb;padding:3px 2px;text-align:center;vertical-align:middle;font-size:8pt}
-                    .nc{background:#f0f3f7;font-weight:bold;text-align:left;padding-left:5px}
-                    .tc{background:#e8f5e9;font-weight:bold;color:#1b5e20}
-                </style>
-                ${thead}
-            </thead>
+        <table class="pt" style="border-collapse:collapse;table-layout:fixed;width:${W}px">
+            <thead>${thead}</thead>
             <tbody>${tbody}</tbody>
         </table>`;
     document.body.appendChild(div);
