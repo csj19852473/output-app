@@ -645,16 +645,17 @@ function openPrint() {
     const totalW = 5;
     const dayW = ((100 - nameW - totalW) / days).toFixed(2);
 
+    // A4 가로: 297mm × 210mm → 96dpi 기준 약 1123 × 794px, 여백 제외 실제 인쇄폭 ≈ 1063px
     const html = `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8">
 <style>
-  @page { size: 297mm 210mm; margin: 8mm; }
+  @page { size: A4 landscape; margin: 8mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Malgun Gothic', Arial, sans-serif; }
-  .tip { font-size: 8pt; color: #888; text-align: center; margin-bottom: 4px; }
+  html, body { width: 1063px; }
+  body { font-family: 'Malgun Gothic', Arial, sans-serif; padding: 0; }
   h2 { font-size: 11pt; margin-bottom: 6px; text-align: center; }
-  table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+  table { border-collapse: collapse; table-layout: fixed; width: 1063px; }
   th { background: #1a3a5c; color: white; padding: 4px 1px; font-size: 7pt; border: 1px solid #335; text-align: center; width: ${dayW}%; }
   td { border: 1px solid #aaa; padding: 2px 1px; text-align: center; vertical-align: middle; font-size: 6.5pt; width: ${dayW}%; word-break: break-all; }
   th.name-col, td.name-col { width: ${nameW}%; text-align: left; padding-left: 3px; }
@@ -664,11 +665,8 @@ function openPrint() {
   .p-site { color: #444; }
   hr { border: none; border-top: 1px solid #ddd; margin: 1px 0; }
   b { color: #c0392b; }
-  .tip { display: block; }
-  @media print { .tip { display: none; } }
 </style>
 </head><body>
-<span class="tip">💡 더 넓게 보려면: 상단 ▼ 눌러서 용지 방향을 <b>가로</b>로 바꿔주세요</span>
 <h2>${y}년 ${parseInt(m)}월 출력일보</h2>
 <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
 <script>window.onload = function(){ window.print(); }<\/script>
