@@ -659,7 +659,7 @@ async function openPrint() {
 
     // 숨김 렌더링용 div 생성
     const div = document.createElement('div');
-    div.style.cssText = `position:fixed;left:-9999px;top:0;width:${W}px;background:#fff;padding:20px 0 10px;font-family:'Malgun Gothic',Arial,sans-serif;`;
+    div.style.cssText = `position:absolute;left:0;top:-99999px;width:${W}px;background:#fff;padding:20px 0 10px;font-family:'Malgun Gothic',Arial,sans-serif;`;
     div.innerHTML = `
         <style>
             .pt th{padding:5px 2px;font-size:8pt;border:1px solid #2c4f6e;text-align:center;color:white;background:#1a3a5c}
