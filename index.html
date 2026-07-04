@@ -613,12 +613,12 @@ function openPrint() {
     const data = load();
     const days = daysIn(curMonth);
     const [y, m] = curMonth.split('-');
-    const workers = data.workers;
+    const workers = data.workers; // 빈 슬롯 제외, 실제 작업자만
 
     // 헤더 행
-    let thead = '<tr><th>작업자</th>';
+    let thead = '<tr><th class="name-col">작업자</th>';
     for (let d = 1; d <= days; d++) thead += `<th>${d}</th>`;
-    thead += '<th>합계</th></tr>';
+    thead += '<th class="total-col">합계</th></tr>';
 
     // 바디 행
     let tbody = '';
@@ -640,27 +640,38 @@ function openPrint() {
         tbody += `<td class="total-col">${total > 0 ? total : ''}</td></tr>`;
     });
 
+    // 열 수에 따라 zoom 자동 계산 (가로 A4 기준 270mm)
+    const totalCols = days + 2;
+    const namePx = 52, totalPx = 32, dayPx = 20;
+    const tableWidthPx = namePx + totalPx + (days * dayPx);
+    const pagePx = 1020; // A4 가로 약 297mm @ 96dpi 기준 여백 제외
+    const zoom = Math.min(1, pagePx / tableWidthPx);
+
     const html = `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8">
 <style>
-  @page { size: A4 landscape; margin: 8mm; }
+  @page { size: 297mm 210mm; margin: 8mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 8pt; }
-  h2 { font-size: 11pt; margin-bottom: 6px; text-align: center; }
-  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-  th { background: #1a3a5c; color: white; padding: 5px 2px; font-size: 7.5pt; border: 1px solid #335; text-align: center; }
-  td { border: 1px solid #aaa; padding: 3px 2px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 7pt; }
-  td.name-col { background: #f0f3f7; font-weight: bold; text-align: left; padding-left: 4px; width: 52px; }
-  td.total-col { background: #e8f5e9; font-weight: bold; color: #1b5e20; width: 32px; }
-  th:first-child { width: 52px; }
-  th:last-child { width: 32px; }
-  .p-site { color: #333; }
-  hr { border: none; border-top: 1px solid #ddd; margin: 2px 0; }
+  body { font-family: 'Malgun Gothic', Arial, sans-serif; }
+  h2 { font-size: 10pt; margin-bottom: 5px; text-align: center; }
+  .wrap { zoom: ${zoom}; transform-origin: top left; }
+  table { border-collapse: collapse; table-layout: fixed; white-space: nowrap; }
+  th { background: #1a3a5c; color: white; padding: 4px 2px; font-size: 7pt; border: 1px solid #335; text-align: center; width: ${dayPx}px; }
+  td { border: 1px solid #aaa; padding: 2px 1px; text-align: center; vertical-align: middle; font-size: 6.5pt; width: ${dayPx}px; }
+  th.name-col, td.name-col { width: ${namePx}px; text-align: left; padding-left: 3px; }
+  td.name-col { background: #f0f3f7; font-weight: bold; }
+  th.total-col, td.total-col { width: ${totalPx}px; }
+  td.total-col { background: #e8f5e9; font-weight: bold; color: #1b5e20; }
+  .p-site { color: #444; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 1px 0; }
+  b { color: #c0392b; }
 </style>
 </head><body>
 <h2>${y}년 ${parseInt(m)}월 출력일보</h2>
+<div class="wrap">
 <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+</div>
 <script>window.onload = function(){ window.print(); }<\/script>
 </body></html>`;
 
