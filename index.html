@@ -642,9 +642,9 @@ function openPrint() {
         tbody += `<td class="total-col">${total > 0 ? total : ''}</td></tr>`;
     });
 
-    // 날짜 열 비율: 이름 13%, 합계 5%, 나머지를 날짜 수로 균등 분배
-    const nameW = 13;
-    const totalW = 5;
+    // 날짜 열 비율: 이름 8%, 합계 4%, 나머지를 날짜 수로 균등 분배
+    const nameW = 8;
+    const totalW = 4;
     const dayW = ((100 - nameW - totalW) / days).toFixed(2);
 
     // A4 가로: 297mm × 210mm → 96dpi 기준 약 1123 × 794px, 여백 제외 실제 인쇄폭 ≈ 1063px
@@ -655,18 +655,18 @@ function openPrint() {
   @page { size: A4 landscape; margin: 8mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1063px; }
-  body { font-family: 'Malgun Gothic', Arial, sans-serif; padding: 0; }
-  h2 { font-size: 11pt; margin-bottom: 6px; text-align: center; }
+  body { font-family: 'Malgun Gothic', Arial, sans-serif; padding-top: 20px; }
+  h2 { font-size: 13pt; margin-bottom: 8px; text-align: center; }
   table { border-collapse: collapse; table-layout: fixed; width: 1063px; }
-  th { background: #1a3a5c; color: white; padding: 4px 1px; font-size: 7pt; border: 1px solid #335; text-align: center; width: ${dayW}%; }
-  td { border: 1px solid #aaa; padding: 2px 1px; text-align: center; vertical-align: middle; font-size: 6.5pt; width: ${dayW}%; word-break: break-all; }
-  th.name-col, td.name-col { width: ${nameW}%; text-align: left; padding-left: 3px; }
+  th { background: #1a3a5c; color: white; padding: 5px 1px; font-size: 8.5pt; border: 1px solid #335; text-align: center; width: ${dayW}%; }
+  td { border: 1px solid #aaa; padding: 3px 2px; text-align: center; vertical-align: middle; font-size: 8pt; width: ${dayW}%; word-break: break-all; }
+  th.name-col, td.name-col { width: ${nameW}%; text-align: left; padding-left: 4px; }
   td.name-col { background: #f0f3f7; font-weight: bold; }
   th.total-col, td.total-col { width: ${totalW}%; }
   td.total-col { background: #e8f5e9; font-weight: bold; color: #1b5e20; }
   .p-site { color: #444; }
-  hr { border: none; border-top: 1px solid #ddd; margin: 1px 0; }
-  b { color: #c0392b; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 2px 0; }
+  b { color: #c0392b; font-size: 8.5pt; }
 </style>
 </head><body>
 <h2>${y}년 ${parseInt(m)}월 출력일보</h2>
