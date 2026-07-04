@@ -405,12 +405,12 @@ const MIN_ROWS = 6;
 
 function load() {
     try {
-        const raw = localStorage.getItem('gongsu2');
+        const raw = localStorage.getItem('gongsu3');
         if (!raw) return { workers: [], entries: [] };
         return JSON.parse(raw);
     } catch { return { workers: [], entries: [] }; }
 }
-function save(d) { localStorage.setItem('gongsu2', JSON.stringify(d)); }
+function save(d) { localStorage.setItem('gongsu3', JSON.stringify(d)); }
 
 /* ── 달 유틸 ── */
 function daysIn(ym) {
