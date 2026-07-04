@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>공수 관리</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Malgun Gothic', Arial, sans-serif; background: #eef1f5; }
@@ -345,6 +346,7 @@
     <div class="topbar-right">
         <input type="month" class="month-input" id="month-input">
         <button class="top-btn" onclick="openPrint()">🖨️ PDF</button>
+        <button class="top-btn" onclick="exportExcel()">📊 엑셀</button>
         <button class="top-btn" onclick="openSettings()">⚙️</button>
     </div>
 </div>
@@ -675,6 +677,52 @@ function openPrint() {
     const w = window.open('', '_blank');
     w.document.write(html);
     w.document.close();
+}
+
+/* ── 엑셀 내보내기 ── */
+function exportExcel() {
+    if (typeof XLSX === 'undefined') { toast('잠시 후 다시 시도해주세요'); return; }
+    const data = load();
+    const days = daysIn(curMonth);
+    const [y, m] = curMonth.split('-');
+
+    // 헤더 행
+    const header = ['작업자'];
+    for (let d = 1; d <= days; d++) header.push(`${d}일`);
+    header.push('합계');
+
+    const rows = [header];
+
+    data.workers.forEach(worker => {
+        const row = [worker];
+        let total = 0;
+        for (let d = 1; d <= days; d++) {
+            const ds = dateStr(curMonth, d);
+            const items = data.entries.filter(e => e.date === ds && e.worker === worker);
+            if (items.length === 0) {
+                row.push('');
+            } else {
+                const dTotal = items.reduce((s, e) => s + e.gongsu, 0);
+                total += dTotal;
+                const cell = items.map(e => `${e.site} ${e.gongsu}`).join('\n');
+                row.push(cell);
+            }
+        }
+        row.push(total > 0 ? total : '');
+        rows.push(row);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // 열 너비 설정
+    ws['!cols'] = [{ wch: 12 }]; // 작업자 열
+    for (let d = 0; d < days; d++) ws['!cols'].push({ wch: 10 });
+    ws['!cols'].push({ wch: 6 }); // 합계 열
+
+    XLSX.utils.book_append_sheet(wb, ws, `${y}년 ${parseInt(m)}월`);
+    XLSX.writeFile(wb, `출력일보_${curMonth}.xlsx`);
+    toast('엑셀 파일이 저장됐어요 📊');
 }
 
 /* ── 설정/백업 ── */
