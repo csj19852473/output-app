@@ -640,12 +640,10 @@ function openPrint() {
         tbody += `<td class="total-col">${total > 0 ? total : ''}</td></tr>`;
     });
 
-    // 열 수에 따라 zoom 자동 계산 (가로 A4 기준 270mm)
-    const totalCols = days + 2;
-    const namePx = 52, totalPx = 32, dayPx = 20;
-    const tableWidthPx = namePx + totalPx + (days * dayPx);
-    const pagePx = 1020; // A4 가로 약 297mm @ 96dpi 기준 여백 제외
-    const zoom = Math.min(1, pagePx / tableWidthPx);
+    // 날짜 열 비율: 이름 13%, 합계 5%, 나머지를 날짜 수로 균등 분배
+    const nameW = 13;
+    const totalW = 5;
+    const dayW = ((100 - nameW - totalW) / days).toFixed(2);
 
     const html = `<!DOCTYPE html>
 <html lang="ko"><head>
@@ -654,24 +652,25 @@ function openPrint() {
   @page { size: 297mm 210mm; margin: 8mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Malgun Gothic', Arial, sans-serif; }
-  h2 { font-size: 10pt; margin-bottom: 5px; text-align: center; }
-  .wrap { zoom: ${zoom}; transform-origin: top left; }
-  table { border-collapse: collapse; table-layout: fixed; white-space: nowrap; }
-  th { background: #1a3a5c; color: white; padding: 4px 2px; font-size: 7pt; border: 1px solid #335; text-align: center; width: ${dayPx}px; }
-  td { border: 1px solid #aaa; padding: 2px 1px; text-align: center; vertical-align: middle; font-size: 6.5pt; width: ${dayPx}px; }
-  th.name-col, td.name-col { width: ${namePx}px; text-align: left; padding-left: 3px; }
+  .tip { font-size: 8pt; color: #888; text-align: center; margin-bottom: 4px; }
+  h2 { font-size: 11pt; margin-bottom: 6px; text-align: center; }
+  table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+  th { background: #1a3a5c; color: white; padding: 4px 1px; font-size: 7pt; border: 1px solid #335; text-align: center; width: ${dayW}%; }
+  td { border: 1px solid #aaa; padding: 2px 1px; text-align: center; vertical-align: middle; font-size: 6.5pt; width: ${dayW}%; word-break: break-all; }
+  th.name-col, td.name-col { width: ${nameW}%; text-align: left; padding-left: 3px; }
   td.name-col { background: #f0f3f7; font-weight: bold; }
-  th.total-col, td.total-col { width: ${totalPx}px; }
+  th.total-col, td.total-col { width: ${totalW}%; }
   td.total-col { background: #e8f5e9; font-weight: bold; color: #1b5e20; }
   .p-site { color: #444; }
   hr { border: none; border-top: 1px solid #ddd; margin: 1px 0; }
   b { color: #c0392b; }
+  .tip { display: block; }
+  @media print { .tip { display: none; } }
 </style>
 </head><body>
+<span class="tip">💡 더 넓게 보려면: 상단 ▼ 눌러서 용지 방향을 <b>가로</b>로 바꿔주세요</span>
 <h2>${y}년 ${parseInt(m)}월 출력일보</h2>
-<div class="wrap">
 <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
-</div>
 <script>window.onload = function(){ window.print(); }<\/script>
 </body></html>`;
 
