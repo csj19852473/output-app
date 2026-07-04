@@ -309,6 +309,22 @@
         }
         .toast.show { opacity: 1; }
 
+        /* 빈 슬롯 행 */
+        .empty-slot {
+            color: #c0c8d4;
+            font-size: 0.75rem;
+            font-style: italic;
+            cursor: pointer;
+        }
+        .empty-slot:hover { background: #f0f8ff !important; color: #90a4b8; }
+        .slot-hint { pointer-events: none; }
+        .slot-cell {
+            background: #fafbfc;
+            cursor: default;
+            border-color: #eaecef;
+        }
+        .slot-cell:hover { background: #fafbfc !important; }
+
         /* 인쇄 */
         @media print {
             .topbar, .tr-add { display: none !important; }
@@ -385,14 +401,14 @@
 
 <script>
 /* ── 데이터 ── */
-const DEFAULT_WORKERS = ['작업자 1','작업자 2','작업자 3','작업자 4','작업자 5','작업자 6'];
+const MIN_ROWS = 6;
 
 function load() {
     try {
         const raw = localStorage.getItem('gongsu2');
-        if (!raw) return { workers: [...DEFAULT_WORKERS], entries: [] };
+        if (!raw) return { workers: [], entries: [] };
         return JSON.parse(raw);
-    } catch { return { workers: [...DEFAULT_WORKERS], entries: [] }; }
+    } catch { return { workers: [], entries: [] }; }
 }
 function save(d) { localStorage.setItem('gongsu2', JSON.stringify(d)); }
 
@@ -430,31 +446,41 @@ function render() {
     hh += '<th class="th-total">합계</th></tr>';
     head.innerHTML = hh;
 
-    // 바디
+    // 바디 — 실제 작업자 + 빈 슬롯 합쳐서 최소 6행 유지
     let bh = '';
-    data.workers.forEach(worker => {
+    const totalRows = Math.max(data.workers.length, MIN_ROWS);
+
+    for (let i = 0; i < totalRows; i++) {
+        const worker = data.workers[i] || null; // null = 빈 슬롯
         bh += '<tr>';
-        // 이름 칸
-        bh += `<td data-w="${h(worker)}" onclick="openWorker(this.dataset.w)">${h(worker)}</td>`;
-        // 날짜 칸
-        let total = 0;
-        for (let d = 1; d <= days; d++) {
-            const ds = dateStr(curMonth, d);
-            const items = data.entries.filter(e => e.date === ds && e.worker === worker);
-            if (items.length === 0) {
-                bh += `<td data-w="${h(worker)}" data-d="${ds}" onclick="openCell(this.dataset.w,this.dataset.d)"><span class="dot">·</span></td>`;
-            } else {
-                const dTotal = items.reduce((s, e) => s + e.gongsu, 0);
-                total += dTotal;
-                const inner = items.map(e =>
-                    `<div class="cell-entry"><span class="cell-site">${h(e.site)}</span><span class="cell-gs">${e.gongsu}</span></div>`
-                ).join('');
-                bh += `<td data-w="${h(worker)}" data-d="${ds}" onclick="openCell(this.dataset.w,this.dataset.d)">${inner}</td>`;
+
+        if (worker === null) {
+            // 빈 슬롯: 이름 칸 누르면 이름 입력
+            bh += `<td class="empty-slot" onclick="addWorkerAtSlot()"><span class="slot-hint">탭하여 입력</span></td>`;
+            for (let d = 1; d <= days; d++) bh += `<td class="slot-cell"></td>`;
+            bh += `<td class="td-total"></td>`;
+        } else {
+            // 실제 작업자 행
+            bh += `<td data-w="${h(worker)}" onclick="openWorker(this.dataset.w)">${h(worker)}</td>`;
+            let total = 0;
+            for (let d = 1; d <= days; d++) {
+                const ds = dateStr(curMonth, d);
+                const items = data.entries.filter(e => e.date === ds && e.worker === worker);
+                if (items.length === 0) {
+                    bh += `<td data-w="${h(worker)}" data-d="${ds}" onclick="openCell(this.dataset.w,this.dataset.d)"><span class="dot">·</span></td>`;
+                } else {
+                    const dTotal = items.reduce((s, e) => s + e.gongsu, 0);
+                    total += dTotal;
+                    const inner = items.map(e =>
+                        `<div class="cell-entry"><span class="cell-site">${h(e.site)}</span><span class="cell-gs">${e.gongsu}</span></div>`
+                    ).join('');
+                    bh += `<td data-w="${h(worker)}" data-d="${ds}" onclick="openCell(this.dataset.w,this.dataset.d)">${inner}</td>`;
+                }
             }
+            bh += `<td class="td-total">${total > 0 ? total : ''}</td>`;
         }
-        bh += `<td class="td-total">${total > 0 ? total : ''}</td>`;
         bh += '</tr>';
-    });
+    }
 
     // 작업자 추가 행
     bh += `<tr class="tr-add"><td colspan="${days + 2}" onclick="addWorker()">＋ 작업자 추가</td></tr>`;
@@ -463,6 +489,16 @@ function render() {
 
 /* ── 작업자 추가 ── */
 function addWorker() {
+    const name = prompt('작업자 이름을 입력하세요');
+    if (!name || !name.trim()) return;
+    const data = load();
+    if (data.workers.includes(name.trim())) { toast('이미 있는 이름이에요'); return; }
+    data.workers.push(name.trim());
+    save(data);
+    render();
+}
+
+function addWorkerAtSlot() {
     const name = prompt('작업자 이름을 입력하세요');
     if (!name || !name.trim()) return;
     const data = load();
