@@ -624,55 +624,54 @@ async function openPrint() {
     const [y, m] = curMonth.split('-');
     const workers = data.workers;
 
-    // A4 가로 기준 너비 (px): 297mm - 여백 16mm = 281mm ≈ 1063px @96dpi
+    const thS = 'padding:5px 2px;font-size:8pt;border:1px solid #2c4f6e;text-align:center;color:white;background:#1a3a5c;';
+    const tdS = 'border:1px solid #bbb;padding:3px 2px;text-align:center;vertical-align:middle;font-size:8pt;';
     const W = 1063;
-    const nameW = Math.round(W * 0.08);
-    const totalW = Math.round(W * 0.04);
+    const nameW = 85, totalW = 43;
     const dayW = Math.floor((W - nameW - totalW) / days);
 
-    // 헤더
-    let thead = `<tr><th style="width:${nameW}px">작업자</th>`;
-    for (let d = 1; d <= days; d++) thead += `<th style="width:${dayW}px">${d}</th>`;
-    thead += `<th style="width:${totalW}px">합계</th></tr>`;
+    // 헤더 — 모두 인라인 스타일
+    let thead = `<tr>
+        <th style="${thS}width:${nameW}px;text-align:left;padding-left:5px;">작업자</th>`;
+    for (let d = 1; d <= days; d++) {
+        thead += `<th style="${thS}width:${dayW}px;">${d}</th>`;
+    }
+    thead += `<th style="${thS}width:${totalW}px;">합계</th></tr>`;
 
-    // 바디
+    // 바디 — 모두 인라인 스타일
     let tbody = '';
     workers.forEach(worker => {
-        tbody += `<tr><td class="nc">${h(worker)}</td>`;
+        tbody += `<tr><td style="${tdS}width:${nameW}px;background:#f0f3f7;font-weight:bold;text-align:left;padding-left:5px;">${h(worker)}</td>`;
         let total = 0;
         for (let d = 1; d <= days; d++) {
             const ds = dateStr(curMonth, d);
             const items = data.entries.filter(e => e.date === ds && e.worker === worker);
             if (items.length === 0) {
-                tbody += '<td></td>';
+                tbody += `<td style="${tdS}width:${dayW}px;"></td>`;
             } else {
                 const dTotal = items.reduce((s, e) => s + e.gongsu, 0);
                 total += dTotal;
                 const inner = items.map(e =>
-                    `<div style="font-size:7.5pt;color:#333">${h(e.site)}</div><div style="font-weight:bold;color:#c0392b;font-size:8pt">${e.gongsu}</div>`
-                ).join('<div style="border-top:1px solid #eee;margin:1px 0"></div>');
-                tbody += `<td>${inner}</td>`;
+                    `<div style="font-size:7.5pt;color:#333;">${h(e.site)}</div>` +
+                    `<div style="font-weight:bold;color:#c0392b;font-size:8pt;">${e.gongsu}</div>`
+                ).join('<div style="border-top:1px solid #eee;margin:1px 0;"></div>');
+                tbody += `<td style="${tdS}width:${dayW}px;">${inner}</td>`;
             }
         }
-        tbody += `<td class="tc">${total > 0 ? total : ''}</td></tr>`;
+        tbody += `<td style="${tdS}width:${totalW}px;background:#e8f5e9;font-weight:bold;color:#1b5e20;">${total > 0 ? total : ''}</td></tr>`;
     });
 
-    // 숨김 렌더링용 div 생성
+    // 화면 위쪽에 잠깐 렌더링 (html2canvas가 올바르게 캡처하도록)
     const div = document.createElement('div');
-    div.style.cssText = `position:absolute;left:0;top:-99999px;width:${W}px;background:#fff;padding:20px 0 10px;font-family:'Malgun Gothic',Arial,sans-serif;`;
-    div.innerHTML = `
-        <style>
-            .pt th{padding:5px 2px;font-size:8pt;border:1px solid #2c4f6e;text-align:center;color:white;background:#1a3a5c}
-            .pt td{border:1px solid #bbb;padding:3px 2px;text-align:center;vertical-align:middle;font-size:8pt}
-            .pt .nc{background:#f0f3f7;font-weight:bold;text-align:left;padding-left:5px}
-            .pt .tc{background:#e8f5e9;font-weight:bold;color:#1b5e20}
-        </style>
-        <div style="text-align:center;font-size:14pt;font-weight:bold;margin-bottom:10px">${y}년 ${parseInt(m)}월 출력일보</div>
-        <table class="pt" style="border-collapse:collapse;table-layout:fixed;width:${W}px">
-            <thead>${thead}</thead>
-            <tbody>${tbody}</tbody>
-        </table>`;
+    div.style.cssText = `position:fixed;left:0;top:0;z-index:9999;width:${W}px;background:#fff;padding:20px 10px 10px;font-family:'Malgun Gothic',Arial,sans-serif;`;
+    div.innerHTML =
+        `<div style="text-align:center;font-size:14pt;font-weight:bold;margin-bottom:10px;">${y}년 ${parseInt(m)}월 출력일보</div>` +
+        `<table style="border-collapse:collapse;table-layout:fixed;width:${W}px;">` +
+        `<thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
     document.body.appendChild(div);
+
+    // 렌더링 완료 대기
+    await new Promise(r => setTimeout(r, 150));
 
     try {
         const canvas = await html2canvas(div, {
@@ -680,18 +679,17 @@ async function openPrint() {
             useCORS: true,
             backgroundColor: '#ffffff',
             logging: false,
-            width: W,
-            windowWidth: W
+            scrollX: 0,
+            scrollY: 0
         });
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const margin = 8;
-        const pdfW = 297 - margin * 2; // 281mm
-        const pdfH = 210 - margin * 2; // 194mm
+        const pdfW = 297 - margin * 2;
+        const pdfH = 210 - margin * 2;
         const ratio = canvas.width / canvas.height;
-        let imgW = pdfW;
-        let imgH = imgW / ratio;
+        let imgW = pdfW, imgH = imgW / ratio;
         if (imgH > pdfH) { imgH = pdfH; imgW = imgH * ratio; }
 
         pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, imgW, imgH);
