@@ -344,7 +344,7 @@
     <h1>공수 관리</h1>
     <div class="topbar-right">
         <input type="month" class="month-input" id="month-input">
-        <button class="top-btn" onclick="window.print()">🖨️ PDF</button>
+        <button class="top-btn" onclick="openPrint()">🖨️ PDF</button>
         <button class="top-btn" onclick="openSettings()">⚙️</button>
     </div>
 </div>
@@ -606,6 +606,67 @@ function saveCell() {
     closeCell();
     render();
     toast('저장됐어요 ✓');
+}
+
+/* ── PDF 인쇄 ── */
+function openPrint() {
+    const data = load();
+    const days = daysIn(curMonth);
+    const [y, m] = curMonth.split('-');
+    const workers = data.workers;
+
+    // 헤더 행
+    let thead = '<tr><th>작업자</th>';
+    for (let d = 1; d <= days; d++) thead += `<th>${d}</th>`;
+    thead += '<th>합계</th></tr>';
+
+    // 바디 행
+    let tbody = '';
+    workers.forEach(worker => {
+        tbody += `<tr><td class="name-col">${h(worker)}</td>`;
+        let total = 0;
+        for (let d = 1; d <= days; d++) {
+            const ds = dateStr(curMonth, d);
+            const items = data.entries.filter(e => e.date === ds && e.worker === worker);
+            if (items.length === 0) {
+                tbody += '<td></td>';
+            } else {
+                const dTotal = items.reduce((s, e) => s + e.gongsu, 0);
+                total += dTotal;
+                const inner = items.map(e => `<span class="p-site">${h(e.site)}</span><br><b>${e.gongsu}</b>`).join('<hr>');
+                tbody += `<td>${inner}</td>`;
+            }
+        }
+        tbody += `<td class="total-col">${total > 0 ? total : ''}</td></tr>`;
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 8pt; }
+  h2 { font-size: 11pt; margin-bottom: 6px; text-align: center; }
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  th { background: #1a3a5c; color: white; padding: 5px 2px; font-size: 7.5pt; border: 1px solid #335; text-align: center; }
+  td { border: 1px solid #aaa; padding: 3px 2px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 7pt; }
+  td.name-col { background: #f0f3f7; font-weight: bold; text-align: left; padding-left: 4px; width: 52px; }
+  td.total-col { background: #e8f5e9; font-weight: bold; color: #1b5e20; width: 32px; }
+  th:first-child { width: 52px; }
+  th:last-child { width: 32px; }
+  .p-site { color: #333; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 2px 0; }
+</style>
+</head><body>
+<h2>${y}년 ${parseInt(m)}월 출력일보</h2>
+<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+<script>window.onload = function(){ window.print(); }<\/script>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
 }
 
 /* ── 설정/백업 ── */
