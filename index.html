@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>공수 관리</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Malgun Gothic', Arial, sans-serif; background: #eef1f5; }
@@ -610,22 +612,33 @@ function saveCell() {
     toast('저장됐어요 ✓');
 }
 
-/* ── PDF 인쇄 ── */
-function openPrint() {
+/* ── PDF 내보내기 (html2canvas + jsPDF) ── */
+async function openPrint() {
+    if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+        toast('라이브러리 로딩 중... 잠시 후 다시 눌러주세요'); return;
+    }
+    toast('PDF 만드는 중... 잠시만요');
+
     const data = load();
     const days = daysIn(curMonth);
     const [y, m] = curMonth.split('-');
-    const workers = data.workers; // 빈 슬롯 제외, 실제 작업자만
+    const workers = data.workers;
 
-    // 헤더 행
-    let thead = '<tr><th class="name-col">작업자</th>';
-    for (let d = 1; d <= days; d++) thead += `<th>${d}</th>`;
-    thead += '<th class="total-col">합계</th></tr>';
+    // A4 가로 기준 너비 (px): 297mm - 여백 16mm = 281mm ≈ 1063px @96dpi
+    const W = 1063;
+    const nameW = Math.round(W * 0.08);
+    const totalW = Math.round(W * 0.04);
+    const dayW = Math.floor((W - nameW - totalW) / days);
 
-    // 바디 행
+    // 헤더
+    let thead = `<tr><th style="width:${nameW}px">작업자</th>`;
+    for (let d = 1; d <= days; d++) thead += `<th style="width:${dayW}px">${d}</th>`;
+    thead += `<th style="width:${totalW}px">합계</th></tr>`;
+
+    // 바디
     let tbody = '';
     workers.forEach(worker => {
-        tbody += `<tr><td class="name-col">${h(worker)}</td>`;
+        tbody += `<tr><td class="nc">${h(worker)}</td>`;
         let total = 0;
         for (let d = 1; d <= days; d++) {
             const ds = dateStr(curMonth, d);
@@ -635,48 +648,62 @@ function openPrint() {
             } else {
                 const dTotal = items.reduce((s, e) => s + e.gongsu, 0);
                 total += dTotal;
-                const inner = items.map(e => `<span class="p-site">${h(e.site)}</span><br><b>${e.gongsu}</b>`).join('<hr>');
+                const inner = items.map(e =>
+                    `<div style="font-size:7.5pt;color:#333">${h(e.site)}</div><div style="font-weight:bold;color:#c0392b;font-size:8pt">${e.gongsu}</div>`
+                ).join('<div style="border-top:1px solid #eee;margin:1px 0"></div>');
                 tbody += `<td>${inner}</td>`;
             }
         }
-        tbody += `<td class="total-col">${total > 0 ? total : ''}</td></tr>`;
+        tbody += `<td class="tc">${total > 0 ? total : ''}</td></tr>`;
     });
 
-    // 날짜 열 비율: 이름 8%, 합계 4%, 나머지를 날짜 수로 균등 분배
-    const nameW = 8;
-    const totalW = 4;
-    const dayW = ((100 - nameW - totalW) / days).toFixed(2);
+    // 숨김 렌더링용 div 생성
+    const div = document.createElement('div');
+    div.style.cssText = `position:fixed;left:-9999px;top:0;width:${W}px;background:#fff;padding:20px 0 10px;font-family:'Malgun Gothic',Arial,sans-serif;`;
+    div.innerHTML = `
+        <div style="text-align:center;font-size:14pt;font-weight:bold;margin-bottom:10px">${y}년 ${parseInt(m)}월 출력일보</div>
+        <table style="border-collapse:collapse;table-layout:fixed;width:${W}px">
+            <thead style="background:#1a3a5c;color:white">
+                <style>
+                    thead th{padding:5px 2px;font-size:8pt;border:1px solid #2c4f6e;text-align:center;color:white;background:#1a3a5c}
+                    tbody td{border:1px solid #bbb;padding:3px 2px;text-align:center;vertical-align:middle;font-size:8pt}
+                    .nc{background:#f0f3f7;font-weight:bold;text-align:left;padding-left:5px}
+                    .tc{background:#e8f5e9;font-weight:bold;color:#1b5e20}
+                </style>
+                ${thead}
+            </thead>
+            <tbody>${tbody}</tbody>
+        </table>`;
+    document.body.appendChild(div);
 
-    // A4 가로: 297mm × 210mm → 96dpi 기준 약 1123 × 794px, 여백 제외 실제 인쇄폭 ≈ 1063px
-    const html = `<!DOCTYPE html>
-<html lang="ko"><head>
-<meta charset="UTF-8">
-<style>
-  @page { size: A4 landscape; margin: 8mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1063px; }
-  body { font-family: 'Malgun Gothic', Arial, sans-serif; padding-top: 20px; }
-  h2 { font-size: 13pt; margin-bottom: 8px; text-align: center; }
-  table { border-collapse: collapse; table-layout: fixed; width: 1063px; }
-  th { background: #1a3a5c; color: white; padding: 5px 1px; font-size: 8.5pt; border: 1px solid #335; text-align: center; width: ${dayW}%; }
-  td { border: 1px solid #aaa; padding: 3px 2px; text-align: center; vertical-align: middle; font-size: 8pt; width: ${dayW}%; word-break: break-all; }
-  th.name-col, td.name-col { width: ${nameW}%; text-align: left; padding-left: 4px; }
-  td.name-col { background: #f0f3f7; font-weight: bold; }
-  th.total-col, td.total-col { width: ${totalW}%; }
-  td.total-col { background: #e8f5e9; font-weight: bold; color: #1b5e20; }
-  .p-site { color: #444; }
-  hr { border: none; border-top: 1px solid #ddd; margin: 2px 0; }
-  b { color: #c0392b; font-size: 8.5pt; }
-</style>
-</head><body>
-<h2>${y}년 ${parseInt(m)}월 출력일보</h2>
-<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
-<script>window.onload = function(){ window.print(); }<\/script>
-</body></html>`;
+    try {
+        const canvas = await html2canvas(div, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width: W,
+            windowWidth: W
+        });
 
-    const w = window.open('', '_blank');
-    w.document.write(html);
-    w.document.close();
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const margin = 8;
+        const pdfW = 297 - margin * 2; // 281mm
+        const pdfH = 210 - margin * 2; // 194mm
+        const ratio = canvas.width / canvas.height;
+        let imgW = pdfW;
+        let imgH = imgW / ratio;
+        if (imgH > pdfH) { imgH = pdfH; imgW = imgH * ratio; }
+
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, imgW, imgH);
+        pdf.save(`출력일보_${curMonth}.pdf`);
+        toast('PDF 저장됐어요! ✓');
+    } catch(e) {
+        toast('PDF 생성 실패. 다시 시도해주세요.');
+    } finally {
+        document.body.removeChild(div);
+    }
 }
 
 /* ── 엑셀 내보내기 ── */
